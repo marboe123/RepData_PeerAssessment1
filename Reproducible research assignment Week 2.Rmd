@@ -1,0 +1,128 @@
+---
+title: "Reproducible Research Week 2 - Course project 1"
+author: "Marcel Boers"
+date: "26 december 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+First I set the workingdirectory on my laptop:
+D:/coursera/reproducible research
+Please adjust the directory to your directorry containing the file: activity.csv.
+```{r setwd}
+setwd("D:/coursera/reproducible research")
+```
+
+
+Then we load the data from csv: 
+```{r load csv}
+activity <- read.csv("activity.csv") 
+
+```
+
+load libraries
+```{r libs}
+library(ggplot2)
+library(plyr)
+```
+
+
+to get an impression from the dataset we use 
+```{r explore}
+str(activity)
+head(activity)
+```
+
+calculate total steps per day:
+```{r mean,  echo=TRUE}
+
+stepsday <- na.omit(activity)
+head(stepsday)
+
+stepsday <- tapply (activity$steps, activity$date, sum, na.rm=TRUE)
+
+qplot(stepsday)
+
+```
+calculate the mean and median steps per day:
+```{r meanandmed,  echo=TRUE}
+
+mean(stepsday)
+median(stepsday)
+
+```
+plot the daily activity pattern:
+```{r dailypatt,  echo=TRUE}
+
+plot(aggregate(steps ~ interval, data = activity, FUN = mean), type = "l")
+
+```
+print the 5-minute interval which contains the maximum number of steps: 
+```{r dailypatt2,  echo=TRUE}
+
+max(activity$steps, na.rm = TRUE)
+
+```
+        
+calculate the number of missing values in the dataset: 
+```{r dailypatt3,  echo=TRUE}
+
+sum(is.na(activity))
+
+```
+I will substitute each NA with a fixed value. I set the fixed value equivalent to the overall mean of the variable activity$steps.
+Create a new dataset with the missing data filled: 
+```{r dailypatt4,  echo=TRUE}
+
+activity2 <- activity
+activity2$steps[is.na(activity2$steps)] <- mean(na.omit(activity$steps))
+activity2$date <- as.Date(activity2$date, format = "%Y-%m-%d")
+
+```
+
+```{r dailypatt5,  echo=TRUE}
+steps_day2 <- aggregate(steps ~ date, rm.na = TRUE, data = activity2, FUN = sum)
+
+par(mfrow = c(1, 2))
+plot(stepsday, type = "h", lwd = 5,lend = "square", main = "With NAs")
+abline(h = seq(0, 20000, 2500), lty = "dashed")
+plot(steps_day2, type = "h", lwd = 5, lend = "square", main = "NAs filled")
+abline(h = seq(0, 20000, 2500), lty = "dashed")
+
+dev.off()
+```
+Filling the NA makes the distributions more homogeneous since there are no longer deep drops in value to zero.
+
+The mean and median are higher that the values in the first part of the assignment:
+```{r dailypatt6,  echo=TRUE}
+
+mean(steps_day2$steps)
+median(steps_day2$steps)
+
+```
+Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day. Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). 
+```{r dailypatt7,  echo=TRUE}
+
+
+activity$date <- as.Date(strptime(activity$date, format="%Y-%m-%d"))
+activity$datetype <- sapply(activity$date, function(x) {
+        if (weekdays(x) == "Saturday" | weekdays(x) =="Sunday") 
+                {y <- "Weekend"} else 
+                {y <- "Weekday"}
+                y
+        })
+
+
+activity_by_date <- aggregate(steps~interval + datetype, activity, mean, na.rm = TRUE)
+plot<- ggplot(activity_by_date, aes(x = interval , y = steps, color = datetype)) +
+       geom_line() +
+       labs(title = "Average daily steps by type of date", x = "Interval", y = "Average number of steps") +
+       facet_wrap(~datetype, ncol = 1, nrow=2)
+print(plot)
+
+```
+
